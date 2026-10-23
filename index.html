@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#e01e37">
+<title>Antares – AI App & Game Builder</title>
+<link id="favicon" rel="icon" type="image/svg+xml" href="">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,sans-serif;background:#07060d;color:#f3e9ea;height:100vh;display:flex;flex-direction:column}
+  header{padding:12px 20px;background:linear-gradient(90deg,#1a0b2e,#5c0f24 55%,#e01e37);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 20px #e01e3755}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand .logo{width:44px;height:44px;filter:drop-shadow(0 0 10px #ff6b3d88)}
+  .brand h1{font-size:22px;letter-spacing:3px;font-weight:800;background:linear-gradient(90deg,#fff4d6,#ffb347,#ff6b3d);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand small{display:block;font-size:11px;letter-spacing:1px;color:#f3c9b8;opacity:.85;-webkit-text-fill-color:#f3c9b8}
+  .settings{display:flex;gap:8px;flex-wrap:wrap}
+  .settings input{padding:8px 12px;border-radius:8px;border:1px solid #ffffff22;background:#00000040;color:#fff;width:200px}
+  main{flex:1;display:grid;grid-template-columns:390px 1fr;overflow:hidden}
+  #left{display:flex;flex-direction:column;border-right:1px solid #2a1520;padding:14px;gap:10px;background:#0c0a14}
+  #chat{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+  .msg{padding:10px 12px;border-radius:10px;font-size:14px;line-height:1.45;white-space:pre-wrap}
+  .user{background:linear-gradient(135deg,#e01e3740,#ff6b3d30);align-self:flex-end;max-width:90%}
+  .ai{background:#ffffff0d;border:1px solid #ffffff10}
+  .welcome{text-align:center;opacity:.8;font-size:13px;padding:20px 10px}
+  .welcome .logo{width:90px;height:90px;margin:0 auto 10px;filter:drop-shadow(0 0 18px #ff6b3d77)}
+  textarea{width:100%;height:100px;padding:10px;border-radius:10px;border:1px solid #3a1d28;background:#120e1c;color:#fff;resize:none;font-size:14px}
+  textarea:focus,input:focus{outline:2px solid #ff6b3d88}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  button{flex:1;padding:10px;border:none;border-radius:10px;cursor:pointer;font-weight:700;background:linear-gradient(135deg,#e01e37,#ff6b3d);color:#fff;transition:transform .1s,filter .2s}
+  button:hover{filter:brightness(1.1)}
+  button:active{transform:scale(.97)}
+  button.alt{background:#1e1626;border:1px solid #3a1d28}
+  button:disabled{opacity:.5;cursor:wait}
+  #right{display:flex;flex-direction:column}
+  .tabs{display:flex;background:#0c0a14;border-bottom:1px solid #2a1520}
+  .tabs div{padding:10px 18px;cursor:pointer;opacity:.7}
+  .tabs .on{border-bottom:2px solid #ff6b3d;opacity:1}
+  iframe{flex:1;border:none;background:#fff}
+  #code{flex:1;display:none;padding:14px;overflow:auto;background:#0a0812;font-family:ui-monospace,monospace;font-size:12px;white-space:pre;color:#ffd9c2}
+  .examples span{display:inline-block;font-size:12px;padding:5px 9px;margin:2px;border-radius:14px;background:#ffffff0f;border:1px solid #ffffff14;cursor:pointer}
+  .examples span:hover{background:#ff6b3d33}
+  @media(max-width:800px){main{grid-template-columns:1fr;grid-template-rows:auto 1fr}#left{max-height:60vh}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo" id="hdrLogo"></div>
+    <div><h1>ANTARES</h1><small>AI App & Game Builder</small></div>
+  </div>
+  <div class="settings">
+    <input id="key" type="password" placeholder="Anthropic API key">
+    <input id="model" placeholder="Model ID (e.g. latest Claude)">
+  </div>
+</header>
+<main>
+  <section id="left">
+    <div class="examples">
+      <span>🚀 Space shooter game with levels</span>
+      <span>✅ Todo app with categories & local storage</span>
+      <span>💰 Expense tracker with charts</span>
+      <span>🧩 2048 puzzle game</span>
+      <span>🎵 Music beat maker</span>
+      <span>🏎️ 3D racing game with Three.js</span>
+    </div>
+    <div id="chat">
+      <div class="welcome" id="welcome">
+        <div class="logo" id="welLogo"></div>
+        <div><b>Welcome to Antares</b><br>Describe any app or game and watch it come to life.</div>
+      </div>
+    </div>
+    <textarea id="prompt" placeholder="Describe any app or game... then keep chatting to refine it. (Ctrl/Cmd + Enter to build)"></textarea>
+    <div class="row">
+      <button id="go">Build ✨</button>
+      <button class="alt" id="reset">New</button>
+    </div>
+    <div class="row">
+      <button class="alt" id="dlHtml">⬇ HTML</button>
+      <button class="alt" id="dlPwa">📱 Installable App (ZIP)</button>
+      <button class="alt" id="dlIcon">🌟 Icon PNG</button>
+    </div>
+  </section>
+  <section id="right">
+    <div class="tabs"><div id="tPrev" class="on">Preview</div><div id="tCode">Code</div></div>
+    <iframe id="preview" sandbox="allow-scripts allow-modals allow-forms allow-pointer-lock allow-popups"></iframe>
+    <div id="code"></div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let chatHistory = [], currentCode = "", appName = "MyApp";
+const FENCE = "`" + "`" + "`";
+
+/* ===== Antares premium icon (SVG) ===== */
+const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+<defs>
+  <linearGradient id="aBg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#2a0f3d"/><stop offset=".6" stop-color="#12081f"/><stop offset="1" stop-color="#05040b"/>
+  </linearGradient>
+  <radialGradient id="aGlow" cx="50%" cy="50%" r="50%">
+    <stop offset="0" stop-color="#ff7a45" stop-opacity=".95"/>
+    <stop offset=".45" stop-color="#e01e37" stop-opacity=".4"/>
+    <stop offset="1" stop-color="#e01e37" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="aCore" cx="42%" cy="38%" r="65%">
+    <stop offset="0" stop-color="#fff7e0"/><stop offset=".3" stop-color="#ffc35a"/>
+    <stop offset=".7" stop-color="#ff4e2b"/><stop offset="1" stop-color="#a50f2b"/>
+  </radialGradient>
+  <linearGradient id="aRing" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#ffd27a" stop-opacity="0"/><stop offset=".5" stop-color="#ffe3a3"/>
+    <stop offset="1" stop-color="#ffd27a" stop-opacity="0"/>
+  </linearGradient>
+</defs>
+<rect width="512" height="512" rx="112" fill="url(#aBg)"/>
+<g fill="#fff">
+  <circle cx="92" cy="104" r="3" opacity=".8"/><circle cx="420" cy="80" r="2.5" opacity=".7"/>
+  <circle cx="440" cy="400" r="3" opacity=".6"/><circle cx="70" cy="420" r="2" opacity=".7"/>
+  <circle cx="380" cy="160" r="1.8" opacity=".5"/><circle cx="140" cy="300" r="1.6" opacity=".5"/>
+</g>
+<circle cx="256" cy="256" r="230" fill="url(#aGlow)"/>
+<path d="M256 34 L272 240 L478 256 L272 272 L256 478 L240 272 L34 256 L240 240 Z" fill="#ffe9c9" opacity=".55"/>
+<ellipse cx="256" cy="256" rx="210" ry="58" fill="none" stroke="url(#aRing)" stroke-width="9" transform="rotate(-24 256 256)"/>
+<circle cx="256" cy="256" r="100" fill="url(#aCore)"/>
+<circle cx="226" cy="222" r="30" fill="#fff" opacity=".35"/>
+<path d="M60 340 A210 58 -24 0 0 452 172" fill="none" stroke="#ffe3a3" stroke-width="9" opacity=".9" transform="rotate(0)"/>
+</svg>`;
+
+const svgUrl = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(ICON_SVG);
+$("favicon").href = svgUrl;
+$("hdrLogo").innerHTML = ICON_SVG;
+$("welLogo").innerHTML = ICON_SVG;
+
+/* ===== Settings ===== */
+$("key").value = localStorage.getItem("antares_key") || "";
+$("model").value = localStorage.getItem("antares_model") || "";
+["key","model"].forEach(f => $(f).onchange = () => localStorage.setItem("antares_"+f, $(f).value.trim()));
+
+const SYSTEM = "You are Antares, an elite senior app and game developer. Build exactly what the user asks " +
+"as ONE complete, self-contained HTML file (inline CSS and JS; CDN libraries like Three.js, Phaser, " +
+"Chart.js, Tone.js allowed). Requirements: polished premium modern UI, responsive and mobile-touch friendly, " +
+"smooth animations, no placeholders or TODOs, fully working logic, localStorage persistence where useful, " +
+"keyboard + touch controls for games. When asked for changes, return the FULL updated file. " +
+"First line: APP_NAME: <short name>. Then the code in a single " + FENCE + "html block. Then 1-3 lines summary.";
+
+document.querySelectorAll(".examples span").forEach(s =>
+  s.onclick = () => { $("prompt").value = s.textContent.replace(/^\S+\s/, "").trim(); $("prompt").focus(); });
+
+function addMsg(text, cls){
+  const w = $("welcome"); if (w) w.remove();
+  const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text;
+  $("chat").appendChild(d); $("chat").scrollTop = 1e9; return d;
+}
+
+/* ===== Build with AI ===== */
+async function build(){
+  const text = $("prompt").value.trim();
+  if (!text) return;
+  const key = $("key").value.trim(), model = $("model").value.trim();
+  if (!key || !model) return alert("Enter your API key and model ID first.");
+  addMsg(text, "user"); $("prompt").value = "";
+  chatHistory.push({role:"user", content:text});
+  const status = addMsg("✨ Antares is building your app...", "ai");
+  $("go").disabled = true;
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({model, max_tokens:16000, system:SYSTEM, messages:chatHistory})
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const out = data.content.map(c => c.text || "").join("");
+    chatHistory.push({role:"assistant", content:out});
+    const name = out.match(/APP_NAME:\s*(.+)/); if (name) appName = name[1].trim();
+    const start = out.indexOf(FENCE + "html");
+    const end = out.lastIndexOf(FENCE);
+    if (start !== -1 && end > start) {
+      currentCode = out.slice(start + FENCE.length + 4, end).trim();
+      render();
+    } else throw new Error("No code returned. Try rephrasing your request.");
+    const summary = out.slice(end + FENCE.length).trim();
+    status.textContent = "✅ " + appName + (summary ? "\n" + summary : "");
+  } catch (e) {
+    status.textContent = "❌ " + e.message;
+    if (chatHistory.length && chatHistory[chatHistory.length-1].role === "user") chatHistory.pop();
+  }
+  $("go").disabled = false;
+}
+
+function render(){ $("preview").srcdoc = currentCode; $("code").textContent = currentCode; }
+
+/* ===== Downloads ===== */
+function download(blob, name){
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+const slug = () => (appName.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")) || "app";
+
+$("dlHtml").onclick = () => currentCode
+  ? download(new Blob([currentCode], {type:"text/html"}), slug() + ".html")
+  : alert("Build something first.");
+
+$("dlPwa").onclick = async () => {
+  if (!currentCode) return alert("Build something first.");
+  const zip = new JSZip();
+  const icon = await makeAppIcon();
+  let html = currentCode;
+  const inject = `<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#e01e37">
+<link rel="apple-touch-icon" href="icon-512.png">
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');<\/script>`;
+  html = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, m => m + "\n" + inject) : inject + html;
+  zip.file("index.html", html);
+  zip.file("manifest.json", JSON.stringify({
+    name: appName, short_name: appName.slice(0,12), start_url: "./index.html",
+    display: "standalone", background_color: "#07060d", theme_color: "#e01e37",
+    icons: [{src:"icon-512.png", sizes:"512x512", type:"image/png", purpose:"any maskable"}]
+  }, null, 2));
+  zip.file("sw.js", `const C='${slug()}-v1';
+self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(['./','./index.html','./manifest.json','./icon-512.png']))));
+self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{const cl=res.clone();caches.open(C).then(c=>c.put(e.request,cl));return res;}))));`);
+  zip.file("icon-512.png", icon);
+  zip.file("README.txt", `Built with Antares.
+Host this folder (Netlify, Vercel, GitHub Pages) and open it -> "Install app".
+For native APK/iOS/desktop builds, use Capacitor or Tauri.`);
+  download(await zip.generateAsync({type:"blob"}), slug() + "-app.zip");
+};
+
+/* Icon for generated apps (first letter on Antares gradient) */
+function makeAppIcon(){
+  const c = document.createElement("canvas"); c.width = c.height = 512; const x = c.getContext("2d");
+  const g = x.createLinearGradient(0,0,512,512); g.addColorStop(0,"#2a0f3d"); g.addColorStop(.6,"#a50f2b"); g.addColorStop(1,"#ff6b3d");
+  x.fillStyle = g; x.fillRect(0,0,512,512);
+  x.fillStyle = "#fff"; x.font = "bold 260px system-ui"; x.textAlign = "center"; x.textBaseline = "middle";
+  x.shadowColor = "#ffb347"; x.shadowBlur = 30;
+  x.fillText((appName[0] || "A").toUpperCase(), 256, 270);
+  return new Promise(r => c.toBlob(r, "image/png"));
+}
+
+/* Download the Antares icon as a 1024px PNG */
+$("dlIcon").onclick = () => {
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement("canvas"); c.width = c.height = 1024;
+    c.getContext("2d").drawImage(img, 0, 0, 1024, 1024);
+    c.toBlob(b => download(b, "antares-icon-1024.png"), "image/png");
+  };
+  img.src = svgUrl;
+};
+
+/* ===== UI controls ===== */
+$("go").onclick = build;
+$("prompt").onkeydown = e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) build(); };
+$("reset").onclick = () => {
+  chatHistory = []; currentCode = ""; appName = "MyApp";
+  $("chat").innerHTML = `<div class="welcome" id="welcome"><div class="logo">${ICON_SVG}</div><div><b>Welcome to Antares</b><br>Describe any app or game and watch it come to life.</div></div>`;
+  $("preview").srcdoc = ""; $("code").textContent = "";
+};
+$("tPrev").onclick = () => { $("tPrev").className="on"; $("tCode").className=""; $("preview").style.display="block"; $("code").style.display="none"; };
+$("tCode").onclick = () => { $("tCode").className="on"; $("tPrev").className=""; $("preview").style.display="none"; $("code").style.display="block"; };
+</script>
+</body>
+</html>
